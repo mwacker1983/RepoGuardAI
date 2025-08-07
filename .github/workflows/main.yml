@@ -1,0 +1,17 @@
+name: Quick AI Check
+on: 
+  pull_request:
+  push:
+    branches-ignore: [main]  # Only check feature branches
+
+jobs:
+  quick-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Check obvious AI keywords
+        run: |
+          if git log -1 --format=%B | grep -iE "(generated.by|created.with|co-authored.*ai|chatgpt|claude|copilot)"; then
+            echo "::error::Obvious AI keywords detected"
+            exit 1
+          fi
