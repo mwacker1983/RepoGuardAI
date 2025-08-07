@@ -1,17 +1,31 @@
-name: Quick AI Check
-on: 
-  pull_request:
+name: Block AI Commits
+on:
+  pull_request:  # Check PRs before merge
+    types: [opened, synchronize, reopened]
   push:
-    branches-ignore: [main]  # Only check feature branches
+    branches-ignore: [main, master]  # Only check feature branches
 
 jobs:
   quick-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
       - name: Check obvious AI keywords
         run: |
-          if git log -1 --format=%B | grep -iE "(generated.by|created.with|co-authored.*ai|chatgpt|claude|copilot)"; then
-            echo "::error::Obvious AI keywords detected"
+          # For PRs, check all commits
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            COMMITS=$(git log origin/${{ github.base_ref }}..HEAD --format=%B)
+          else
+            COMMITS=$(git log -1 --format=%B)
+          fi
+          
+          if echo "$COMMITS" | grep -iE "(generated.by|created.with|co-authored.*ai|chatgpt|claude|copilot)"; then
+            echo "::error::AI keywords detected in commit messages"
+            echo "❌ Found AI-related keywords. Please remove them from your commit messages."
             exit 1
           fi
+          
+          echo "✅ No AI keywords detected"
